@@ -14,7 +14,7 @@ export async function matchFaq(question: string, faqEntries: FAQEntry[]): Promis
   if (!faqEntries.length) return { confidence: 0, answer: null, faqId: null };
   if (!client) return fallbackFaqMatch(question, faqEntries);
 
-  const serialized = faqEntries.map((f) => ({ id: f.id, q: f.question, a: f.answer }));
+  const serialized = faqEntries.map((f) => ({ id: f.id, q: f.question, a: f.approved_answer }));
 
   const completion = await client.chat.completions.create({
     model: 'gpt-4o-mini',
@@ -32,7 +32,7 @@ export async function matchFaq(question: string, faqEntries: FAQEntry[]): Promis
   return {
     confidence: typeof json.confidence === 'number' ? json.confidence : 0,
     faqId: picked?.id ?? null,
-    answer: picked?.answer ?? null
+    answer: picked?.approved_answer ?? null
   };
 }
 
@@ -42,7 +42,7 @@ export function fallbackFaqMatch(question: string, faqEntries: FAQEntry[]): FaqM
   let score = 0;
 
   for (const entry of faqEntries) {
-    const hay = `${entry.question} ${entry.answer} ${entry.tags ?? ''}`.toLowerCase();
+    const hay = `${entry.question} ${entry.approved_answer} ${entry.tags ?? ''}`.toLowerCase();
     const entryScore = terms.reduce((acc, term) => acc + (hay.includes(term) ? 1 : 0), 0) / Math.max(terms.length, 1);
     if (entryScore > score) {
       score = entryScore;
@@ -50,7 +50,7 @@ export function fallbackFaqMatch(question: string, faqEntries: FAQEntry[]): FaqM
     }
   }
 
-  return { confidence: score, faqId: best?.id ?? null, answer: best?.answer ?? null };
+  return { confidence: score, faqId: best?.id ?? null, answer: best?.approved_answer ?? null };
 }
 
 export function parseFaqSelectorResponse(raw: string): { faqId: string | null; confidence: number } {

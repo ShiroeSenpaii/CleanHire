@@ -1,29 +1,31 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { ErrorBanner } from '@/components/ErrorBanner';
 
 export default function LoginPage() {
-  const [password, setPassword] = useState('');
+  const [passcode, setPasscode] = useState('');
   const [error, setError] = useState('');
   const router = useRouter();
+  const next = useSearchParams().get('next') || '/hires';
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
-    const res = await fetch('/api/login', { method: 'POST', body: JSON.stringify({ password }) });
-    if (!res.ok) {
-      setError('Invalid password');
-      return;
-    }
-    router.push('/owner/hires');
+    setError('');
+    const res = await fetch('/api/login', { method: 'POST', body: JSON.stringify({ passcode }) });
+    const data = await res.json();
+    if (!res.ok) return setError(data.error || 'Login failed');
+    router.push(next);
+    router.refresh();
   }
 
   return (
     <div className="card" style={{ maxWidth: 420, margin: '40px auto' }}>
       <h2>Owner Login</h2>
+      <ErrorBanner message={error} />
       <form onSubmit={onSubmit} className="grid">
-        <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password" />
-        {error && <p style={{ color: 'red' }}>{error}</p>}
+        <input type="password" value={passcode} onChange={(e) => setPasscode(e.target.value)} placeholder="Passcode" />
         <button type="submit">Login</button>
       </form>
     </div>

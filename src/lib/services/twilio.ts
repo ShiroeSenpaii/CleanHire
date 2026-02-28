@@ -1,21 +1,15 @@
 import Twilio from 'twilio';
 import { env } from '@/lib/env';
 
-const client = env.TWILIO_ACCOUNT_SID && env.TWILIO_AUTH_TOKEN
-  ? Twilio(env.TWILIO_ACCOUNT_SID, env.TWILIO_AUTH_TOKEN)
-  : null;
+const enabled = !!(env.TWILIO_ACCOUNT_SID && env.TWILIO_AUTH_TOKEN && env.TWILIO_FROM_NUMBER);
+const client = enabled ? Twilio(env.TWILIO_ACCOUNT_SID!, env.TWILIO_AUTH_TOKEN!) : null;
 
 export async function sendSms(to: string, body: string) {
-  if (!client || !env.TWILIO_FROM_NUMBER) {
-    console.warn('Twilio not configured, skipped send', { to, body });
-    return { sid: 'mocked' };
+  if (!client) {
+    console.log(`invite would be sent to ${to}: ${body}`);
+    return { sid: 'local-skip' };
   }
 
-  const res = await client.messages.create({
-    to,
-    from: env.TWILIO_FROM_NUMBER,
-    body
-  });
-
-  return { sid: res.sid };
+  const msg = await client.messages.create({ from: env.TWILIO_FROM_NUMBER!, to, body });
+  return { sid: msg.sid };
 }

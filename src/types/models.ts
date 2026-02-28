@@ -4,12 +4,10 @@ export type ItemStatus = 'Missing' | 'Submitted' | 'Approved' | 'Rejected';
 export interface Company {
   id: string;
   name: string;
-  ownerPhone: string;
   ownerName: string;
   ownerEmail?: string;
-  dashboardPasswordHash: string;
-  remindersConfig: string;
-  defaultTimezone?: string;
+  ownerPhone: string;
+  channel: 'sms' | 'whatsapp';
 }
 
 export interface Hire {
@@ -17,9 +15,11 @@ export interface Hire {
   companyId: string;
   fullName: string;
   phone: string;
+  email?: string;
   status: HireStatus;
   magicTokenHash: string;
   tokenExpiresAt: string;
+  magicLinkUrl?: string;
   driveFolderId: string;
   reminderCount: number;
   lastReminderAt?: string;
@@ -68,15 +68,6 @@ export interface FAQEntry {
   id: string;
   companyId: string;
   question: string;
-  answer: string;
+  approved_answer: string;
   tags?: string;
-  active: boolean;
-}
-
-export interface DispatchRequest {
-  id: string;
-  hireId: string;
-  message: string;
-  status: 'Pending' | 'Accepted' | 'Declined';
-  createdAt: string;
 }

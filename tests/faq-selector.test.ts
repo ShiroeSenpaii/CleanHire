@@ -9,8 +9,8 @@ describe('faq selector parsing', () => {
 
   it('fallback matcher returns best faq answer', () => {
     const result = fallbackFaqMatch('where do i clock in', [
-      { id: '1', companyId: 'c1', question: 'Where do I clock in?', answer: 'Use app check-in.', tags: 'clock', active: true },
-      { id: '2', companyId: 'c1', question: 'Uniform', answer: 'Wear black pants.', tags: '', active: true }
+      { id: '1', companyId: 'c1', question: 'Where do I clock in?', approved_answer: 'Use app check-in.', tags: 'clock' },
+      { id: '2', companyId: 'c1', question: 'Uniform', approved_answer: 'Wear black pants.', tags: '' }
     ]);
 
     expect(result.faqId).toBe('1');

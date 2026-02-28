@@ -1,105 +1,54 @@
-# CleanOps Onboarding (V1)
+# CleanOps Onboarding V1
 
-SMS-first onboarding product for cleaning businesses:
-**invited -> paperwork complete -> FAQ/training ready -> first job confirmed**.
+## What this version does
+- Passcode login with signed HTTP-only session cookie.
+- Companies admin (create + list) and company selection workflow.
+- Hires flow: create hire, auto-create required item checklist, list + detail + approve/reject.
+- Magic link onboarding portal: `/start?token=...` with document upload.
+- FAQ CRUD scoped by selected company.
+- `/api/health` diagnostics.
+- Twilio and Drive are optional for local dev.
 
-## Implementation plan (phases + files)
-1. **Scaffold + foundations**
-   - `package.json`, `next.config.mjs`, `src/app/layout.tsx`, `src/types/models.ts`
-2. **Core service layer + APIs**
-   - Airtable: `src/lib/airtable/*`
-   - Drive: `src/lib/services/drive.ts`
-   - Twilio: `src/lib/services/twilio.ts`
-   - FAQ matching: `src/lib/faq/matcher.ts`
-   - Flow orchestration: `src/lib/services/onboarding.ts`
-   - API routes: `src/app/api/**`
-3. **UI**
-   - Owner: `src/app/owner/hires/*`, `src/app/owner/faq/page.tsx`
-   - Hire portal: `src/app/hire/[token]/page.tsx`
-4. **Ops docs + tests**
-   - `airtable_schema.md`, `scripts/run-reminders.ts`, `tests/*.test.ts`
+## Routes
+- UI: `/login`, `/logout`, `/companies`, `/hires`, `/hires/[hireId]`, `/faq`, `/start?token=...`
+- Admin API (auth required by middleware): `/api/admin/*`
+- Public API: `/api/login`, `/api/logout`, `/api/hire/start`, `/api/hire/submit`, `/api/health`
 
-## Features included
-- Owner creates hire; app creates Drive folder, creates HireItems, sends invite SMS.
-- Hire token portal for mobile uploads to Drive with Airtable status updates.
-- Reminder job route + script (day 1/3/7 configurable).
-- Owner review approve/reject with rejection SMS + re-upload link.
-- Inbound SMS FAQ bot (strictly FAQ answer text or escalation to owner).
-- Dispatch Lite (owner sends request, hire YES/NO updates status + owner notified).
+## Setup
+1. Copy `.env.example` to `.env.local`.
+2. Fill Airtable vars (`AIRTABLE_API_KEY`, `AIRTABLE_BASE_ID`).
+3. Create Airtable fields exactly as in `airtable_schema.md`.
+4. Install deps: `npm install`.
+5. Optional seed: `node scripts/seed-airtable.mjs`.
+6. Run app: `npm run dev`.
 
-## Environment variables
-```bash
-NEXT_PUBLIC_APP_URL=http://localhost:3000
-OWNER_PASSWORD=changeme
-SESSION_SECRET=dev-secret
+## Required env vars
+- `OWNER_PASSCODE`
+- `SESSION_SECRET`
+- `AIRTABLE_API_KEY`
+- `AIRTABLE_BASE_ID`
 
-AIRTABLE_API_KEY=
-AIRTABLE_BASE_ID=
+## Optional env vars
+- `DEFAULT_COMPANY_ID` and `NEXT_PUBLIC_DEFAULT_COMPANY_ID` for single-company mode
+- Twilio: `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM_NUMBER`
+- Drive: `GOOGLE_SERVICE_ACCOUNT_EMAIL`, `GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY`, `GOOGLE_DRIVE_PARENT_FOLDER_ID`
+- FAQ match: `OPENAI_API_KEY`
 
-TWILIO_ACCOUNT_SID=
-TWILIO_AUTH_TOKEN=
-TWILIO_FROM_NUMBER=
+If Twilio is not configured, hire creation still succeeds and logs: `invite would be sent to ...`.
+If Drive is not configured, uploads are stored under `/tmp/cleanops`.
 
-OPENAI_API_KEY=
+## Airtable setup notes
+If schema differs from field names above, API calls will fail. Check `/api/health` to verify table reachability.
 
-GOOGLE_SERVICE_ACCOUNT_EMAIL=
-GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
-GOOGLE_DRIVE_PARENT_FOLDER_ID=
+## Acceptance checklist
+- Cannot access `/hires` when logged out (redirect to `/login`).
+- Login persists; refresh still keeps access.
+- Create company from `/companies`.
+- Select company and create hire from `/hires`; row appears after refresh.
+- Open `/hires/[hireId]`; required items exist and can be approved/rejected.
+- Open `/start?token=...`; upload one file; item moves to `Submitted`.
 
-REMINDER_DAYS=1,3,7
-FAQ_CONFIDENCE_THRESHOLD=0.65
-CRON_SHARED_SECRET=dev-cron-secret
-```
-
-## Manual test checklist
-1. Login at `/login`.
-2. Create a hire in `/owner/hires`.
-3. Open invite link and upload 1+ docs from `/hire/:token`.
-4. Approve/reject from owner hire detail page.
-5. Send dispatch request and reply YES/NO from hire phone.
-6. Send inbound FAQ text and verify answer/escalation behavior.
-7. Run reminders manually.
-
-## Reminder scheduling
-### Endpoint
-`POST /api/owner/reminders` with header `x-cron-secret: $CRON_SHARED_SECRET`
-
-### Local script
-```bash
-node --env-file=.env.local scripts/run-reminders.ts
-```
-
-### Render cron
-- Add a Cron Job hitting `https://yourapp.com/api/owner/reminders`
-- Header: `x-cron-secret: ...`
-- Schedule: `0 14 * * *`
-
-### VPS cron example
-```cron
-0 14 * * * curl -X POST https://yourapp.com/api/owner/reminders -H 'x-cron-secret: YOUR_SECRET'
-```
-
-### n8n cron
-- Cron node daily
-- HTTP node POST to `/api/owner/reminders` with `x-cron-secret`
-
-## How to run locally
-1. Install deps: `npm install`
-2. Create `.env.local` with vars above
-3. Run: `npm run dev`
-4. Open `http://localhost:3000`
-
-## How to deploy MVP
-1. Deploy on Vercel/Render as Next.js app.
-2. Set all environment variables.
-3. Configure Twilio webhooks:
-   - inbound: `POST /api/twilio/inbound`
-   - delivery status: `POST /api/twilio/status`
-4. Share Google Drive parent folder with service account email.
-5. Configure daily reminders via cron.
-
-## What to build next (V1.1)
-- Owner reply console for escalated FAQ threads.
-- Signed file preview URLs for owner UI.
-- Better dispatch templates + optional multilingual SMS.
-- Retry queue + dead-letter log for external API failures.
+## Deploy MVP
+- Deploy Next.js app (Vercel/Render).
+- Add env vars.
+- Set daily cron hitting reminders endpoint if you use reminder flow.
